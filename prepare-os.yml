@@ -1,0 +1,59 @@
+---
+- name: INSTALLING SAMIM REQUIRED PACKAGES
+  hosts: all
+  tasks:
+  - name: System details
+    debug: msg="{{ item }}"
+    with_items: 
+    - "{{ ansible_distribution }}"
+    - "{{ ansible_distribution_version }}"
+    - "{{ ansible_distribution_major_version }}"
+
+  - name: Install packages [RedHat Based]
+    yum:
+      name: ['tor', 'torsocks', 'vim', 'make', 'openssh-server', 'gcc', 'net-tools', 'telnet', 'sysstat', 'python2-devel', 'python-devel']
+      state: latest
+    register: tor_package
+    when: ansible_os_family == 'RedHat'
+
+
+  - name: Install the latest version of Tor and torsocks [Debian Based]
+    apt:
+      name: ['tor', 'torsocks', 'vim', 'make', 'openssh-server', 'gcc', 'net-tools', 'telnet', 'sysstat', 'python-dev', 'python3-dev']
+      update_cache: true
+      state: present
+    register: tor_package
+    when: ansible_os_family == 'Debian'
+
+
+  - name: Enable Systemd services
+    systemd:
+      name: tor
+      enabled: yes
+      daemon_reload: yes
+
+
+  - name: Restart services
+    systemd:
+      name: tor
+      state: restarted
+    when: tor_package.changed
+
+
+  - name: Start Services [RedHat Based]
+    systemd:
+      name: "{{ item }}"
+      state: started
+    with_items: 
+      - tor
+      - sshd
+    when: ansible_os_family == 'RedHat'
+
+  - name: Start Services [Debian Based]
+    systemd:
+      name: "{{ item }}"
+      state: started
+    with_items: 
+      - tor
+      - ssh
+    when: ansible_os_family == 'Debian'
